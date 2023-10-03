@@ -188,6 +188,32 @@ class TurbostreamerSerializer
   end
 end
 
+require 'props_template'
+
+class PropsTemplateSerializer
+  def initialize(posts)
+    @posts = posts
+  end
+
+  def to_json
+    json = Props::Base.new
+    json.array! @posts do |post|
+      json.set! :id, post.id
+      json.set! :body, post.body
+      json.set! :commenter_names, post.commenters.pluck(:name)
+
+      json.set! :comments do
+        json.array! post.comments do |comment|
+          json.set! :id, comment.id
+          json.set! :body, comment.body
+        end
+      end
+    end
+
+    json.result!
+  end
+end
+
 # --- Test data creation ---
 
 100.times do |i|
@@ -228,6 +254,7 @@ end
 representable = Proc.new { PostsRepresenter.new(posts).to_json }
 simple_ams = Proc.new { SimpleAMS::Renderer::Collection.new(posts, serializer: SimpleAMSPostSerializer).to_json }
 turbostreamer = Proc.new { TurbostreamerSerializer.new(posts).to_json }
+props_template = Proc.new { PropsTemplateSerializer.new(posts).to_json }
 
 # --- Execute the serializers to check their output ---
 GC.disable
@@ -244,7 +271,8 @@ parsed_correct = JSON.parse(correct)
   rails: rails,
   representable: representable,
   simple_ams: simple_ams,
-  turbostreamer: turbostreamer
+  turbostreamer: turbostreamer,
+  props_template: props_template
 }.each do |name, serializer|
   result = serializer.call
   parsed_result = JSON.parse(result)
@@ -266,6 +294,7 @@ Benchmark.ips do |x|
   x.report(:representable, &representable)
   x.report(:simple_ams, &simple_ams)
   x.report(:turbostreamer, &turbostreamer)
+  x.report(:props_template, &props_template)
 
   x.compare!
 end
@@ -284,6 +313,7 @@ Benchmark.memory do |x|
   x.report(:representable, &representable)
   x.report(:simple_ams, &simple_ams)
   x.report(:turbostreamer, &turbostreamer)
+  x.report(:props_template, &props_template)
 
   x.compare!
 end

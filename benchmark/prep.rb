@@ -24,6 +24,7 @@ gemfile(true) do
   gem "representable"
   gem "simple_ams"
   gem "sqlite3"
+  gem "props_template"
 end
 
 # --- Test data model setup ---
